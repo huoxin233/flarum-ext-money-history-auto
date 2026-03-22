@@ -34,21 +34,27 @@ class UserSaveMiddleware implements MiddlewareInterface
     public function process(ServerRequestInterface $request, RequestHandlerInterface $handler): ResponseInterface
     {
         $actor = RequestUtil::getActor($request);
-        $response = $handler->handle($request);
         $attributes = Arr::get($request->getParsedBody(), 'data.attributes');
+        
+        $oldMoney = 0;
+        $userId = Arr::get($request->getParsedBody(), 'data.id');
+        if ($request->getMethod() == 'PATCH' && strpos($request->getUri(), '/users/') && isset($attributes['money'])) {
+            $preSaveUser = User::query()->where("id", $userId)->first();
+            $oldMoney = $preSaveUser ? $preSaveUser->money : 0;
+            $response = $handler->handle($request);
 
-        if ($response->getStatusCode() == 200 && strpos($request->getUri(), '/users/') && $request->getMethod() == 'PATCH' && isset($attributes['money']) && $actor->money != $attributes['money']) {
-            $userId = Arr::get($request->getParsedBody(), 'data.id');
-            $user = User::query()->selectRaw("*, '{$actor->id}' as create_user_id")->where("id", $userId)->first();
+            if ($response->getStatusCode() === 200) {
+                $user = User::query()->where('id', $userId)->first();
+                $newMoney = $user ? $user->money : $oldMoney;
 
-            if ($user) {
-                $money = (float) $attributes['money'] - $user->money;
-                $user->init_money = $user->money;
-                $user->money = $attributes['money'];
-                $this->events->dispatch(new MoneyHistoryEvent($user, $money, $this->source, $this->sourceDesc, $this->sourceKey));
+                if ($user && $newMoney != $oldMoney) {
+                    $moneyDifference = $newMoney - $oldMoney;
+                    $this->events->dispatch(new MoneyHistoryEvent($user, $moneyDifference, $this->source, $this->sourceDesc, $this->sourceKey, $actor, $oldMoney));
+                }
             }
-        }
 
-        return $response;
+            return $response;
+        }
+        return $handler->handle($request);
     }
 }

@@ -8,7 +8,6 @@ use Flarum\User\User;
 use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Support\Arr;
 use Mattoid\MoneyHistory\Event\MoneyAllHistoryEvent;
-use Mattoid\OperateLog\model\UserOperateLog;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Server\MiddlewareInterface;
@@ -40,9 +39,9 @@ class DistributeAllHistoryMiddleware implements MiddlewareInterface
 
             $amount = Arr::get($request->getParsedBody(), 'amount');
 
-            $userList = User::query()->selectRaw("*, '{$userId}' as create_user_id")->get();
-
-            $this->events->dispatch(new MoneyAllHistoryEvent($userList, $amount, $this->source, $this->sourceDesc, $this->sourceKey));
+            User::query()->chunk(500, function ($userList) use ($amount, $actor) {
+                $this->events->dispatch(new MoneyAllHistoryEvent($userList->all(), (float)$amount, $this->source, $this->sourceDesc, $this->sourceKey, $actor));
+            });
         }
 
 

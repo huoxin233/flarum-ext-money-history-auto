@@ -37,8 +37,7 @@ class PostWasLikedHistory
             $user->money -= $money;
             $user->save();
         } else {
-            $event->post->user->create_user_id = $event->user_id;
-            $this->events->dispatch(new MoneyHistoryEvent($event->post->user, $money, $this->source, $this->sourceDesc, $this->sourceKey));
+            $this->events->dispatch(new MoneyHistoryEvent($event->post->user, $money, $this->source, $this->sourceDesc, $this->sourceKey, $event->user));
         }
     }
 }

@@ -25,20 +25,18 @@ class PostWasUnlikedHistory
 
         $this->sourceKey = "mattoid-money-history-auto.forum.post-was-unliked";
         $this->sourceDesc = $translator->trans("mattoid-money-history-auto.forum.post-was-unliked");
-        $this->autoremove = (int)$this->settings->get('antoinefr-money.autoremove', 1);
     }
 
 
     public function handle(PostWasUnliked $event) {
         $money = (float)$this->settings->get('antoinefr-money.moneyforlike', 0);
-
         $rewarded = $this->settings->get("mattoid-money-history-auto.privateChatsAreNotRewarded", 0);
         if ($rewarded && $event->post->discussion->is_private) {
             $user = $event->post->user;
-            $user->money += $money;
+            $user->money -= $money;
             $user->save();
         } else {
-            $this->events->dispatch(new MoneyHistoryEvent($event->post->user, -$money, $this->source, $this->sourceDesc, $this->sourceKey));
+            $this->events->dispatch(new MoneyHistoryEvent($event->post->user, -$money, $this->source, $this->sourceDesc, $this->sourceKey, $event->user));
         }
     }
 }

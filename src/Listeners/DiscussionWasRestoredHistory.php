@@ -39,7 +39,7 @@ class DiscussionWasRestoredHistory
                 $user->money -= $money;
                 $user->save();
             } else {
-                $this->events->dispatch(new MoneyHistoryEvent($event->discussion->user, $money, $this->source, $this->sourceDesc, $this->sourceKey));
+                $this->events->dispatch(new MoneyHistoryEvent($event->discussion->user, $money, $this->source, $this->sourceDesc, $this->sourceKey, $event->actor));
             }
         }
     }

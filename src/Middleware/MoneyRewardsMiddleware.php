@@ -35,6 +35,18 @@ class MoneyRewardsMiddleware implements MiddlewareInterface
     {
         $actor = RequestUtil::getActor($request);
         $userId = Arr::get($actor, 'id');
+        $postId = Arr::get($request->getAttribute("routeParameters"), "id");
+        $targetUser = null;
+        $oldTargetMoney = 0;
+        
+        if ($postId && preg_match('/\/posts\/\d*\/money-rewards/', $request->getUri())) {
+            $post = Post::query()->where('id', $postId)->first();
+            if ($post) {
+                $targetUser = User::query()->where('id', $post->user_id)->first();
+                $oldTargetMoney = $targetUser ? $targetUser->money : 0;
+            }
+        }
+        $oldActorMoney = $actor->money;
 
         $response = $handler->handle($request);
 
@@ -44,14 +56,13 @@ class MoneyRewardsMiddleware implements MiddlewareInterface
             $createMoney = Arr::get($request->getParsedBody(), 'data.attributes.createMoney');
 
             if (!$createMoney) {
-                $this->events->dispatch(new MoneyHistoryEvent($actor, -$amount, $this->source, $this->sourceDesc, $this->sourceKey));
+                $this->events->dispatch(new MoneyHistoryEvent($actor, -$amount, $this->source, $this->sourceDesc, $this->sourceKey, $actor, $oldActorMoney));
             }
 
-            $postId = Arr::get($request->getAttribute("routeParameters"), "id");
-            $post = Post::query()->where('id', $postId)->first();
-            $user = User::query()->where('id', $post->user_id)->first();
-            $user->create_user_id = $userId;
-            $this->events->dispatch(new MoneyHistoryEvent($user, $amount, $this->source, $this->sourceDesc, $this->sourceKey));
+            if ($targetUser) {
+                $user = User::query()->where('id', $targetUser->id)->first();
+                $this->events->dispatch(new MoneyHistoryEvent($user, $amount, $this->source, $this->sourceDesc, $this->sourceKey, $actor, $oldTargetMoney));
+            }
         }
 
         return $response;

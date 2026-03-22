@@ -48,11 +48,11 @@ class PostWasRestoredHistory
 
                 $rewarded = $this->settings->get("mattoid-money-history-auto.privateChatsAreNotRewarded", 0);
                 if ($rewarded && $event->post->discussion->is_private) {
-                    $user = $event->actor;
+                    $user = $event->post->user;
                     $user->money -= $money;
                     $user->save();
                 } else {
-                    $this->events->dispatch(new MoneyHistoryEvent($event->post->user, $money, $this->source, $this->sourceDesc, $this->sourceKey));
+                    $this->events->dispatch(new MoneyHistoryEvent($event->post->user, $money, $this->source, $this->sourceDesc, $this->sourceKey, $event->actor));
                 }
             }
         }
