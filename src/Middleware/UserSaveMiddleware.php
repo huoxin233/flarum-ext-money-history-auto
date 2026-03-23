@@ -35,7 +35,7 @@ class UserSaveMiddleware implements MiddlewareInterface
     {
         $actor = RequestUtil::getActor($request);
         $attributes = Arr::get($request->getParsedBody(), 'data.attributes');
-        
+
         $oldMoney = 0;
         $userId = Arr::get($request->getParsedBody(), 'data.id');
         if ($request->getMethod() == 'PATCH' && strpos($request->getUri(), '/users/') && isset($attributes['money'])) {

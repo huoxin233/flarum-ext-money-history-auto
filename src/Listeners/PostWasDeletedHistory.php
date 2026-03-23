@@ -26,12 +26,12 @@ class PostWasDeletedHistory
 
         $this->sourceKey = "mattoid-money-history-auto.forum.post-was-deleted";
         $this->sourceDesc = $translator->trans("mattoid-money-history-auto.forum.post-was-deleted");
-        $this->autoremove = (int)$this->settings->get('antoinefr-money.autoremove', 1);
+        $this->autoremove = (int) $this->settings->get('antoinefr-money.autoremove', 1);
     }
 
     public function ignoreNotifyingUsers(string $content): string
     {
-        if (!$this->settings->get('antoinefr-money.ignoreNotifyingUsers', false)) {
+        if (! $this->settings->get('antoinefr-money.ignoreNotifyingUsers', false)) {
             return $content;
         }
 
@@ -39,12 +39,13 @@ class PostWasDeletedHistory
         return trim(str_replace(["\r", "\n"], '', preg_replace($pattern, '', $content)));
     }
 
-    public function handle(PostDeleted $event) {
+    public function handle(PostDeleted $event)
+    {
         if ($this->autoremove == AutoRemoveEnum::DELETED && $event->post->type == 'comment') {
-            $minimumLength = (int)$this->settings->get('antoinefr-money.postminimumlength', 0);
+            $minimumLength = (int) $this->settings->get('antoinefr-money.postminimumlength', 0);
 
             if (mb_strlen($this->ignoreNotifyingUsers($event->post->content)) >= $minimumLength) {
-                $money = (float)$this->settings->get('antoinefr-money.moneyforpost', 0);
+                $money = (float) $this->settings->get('antoinefr-money.moneyforpost', 0);
 
                 $rewarded = $this->settings->get("mattoid-money-history-auto.privateChatsAreNotRewarded", 0);
                 if ($rewarded && $event->post->discussion->is_private) {

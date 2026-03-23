@@ -25,12 +25,12 @@ class PostWasPostedHistory
 
         $this->sourceKey = "mattoid-money-history-auto.forum.post-was-posted";
         $this->sourceDesc = $translator->trans("mattoid-money-history-auto.forum.post-was-posted");
-        $this->autoremove = (int)$this->settings->get('antoinefr-money.autoremove', 1);
+        $this->autoremove = (int) $this->settings->get('antoinefr-money.autoremove', 1);
     }
 
     public function ignoreNotifyingUsers(string $content): string
     {
-        if (!$this->settings->get('antoinefr-money.ignoreNotifyingUsers', false)) {
+        if (! $this->settings->get('antoinefr-money.ignoreNotifyingUsers', false)) {
             return $content;
         }
 
@@ -38,23 +38,24 @@ class PostWasPostedHistory
         return trim(str_replace(["\r", "\n"], '', preg_replace($pattern, '', $content)));
     }
 
-    public function handle(Posted $event) {
+    public function handle(Posted $event)
+    {
         $permissions = true;
         if ($event->post) {
             $user = $event->actor;
             $discussionTags = $event->post->discussion->tags;
             foreach ($discussionTags as $tag) {
-                if ($user->hasPermission("tag{$tag->id}.discussion.money.disable_money") && !$user->isAdmin()) {
+                if ($user->hasPermission("tag{$tag->id}.discussion.money.disable_money") && ! $user->isAdmin()) {
                     $permissions = false;
                 }
             }
         }
 
         if ($event->post['number'] > 1 && $permissions) {
-            $minimumLength = (int)$this->settings->get('antoinefr-money.postminimumlength', 0);
+            $minimumLength = (int) $this->settings->get('antoinefr-money.postminimumlength', 0);
 
             if (mb_strlen($this->ignoreNotifyingUsers($event->post->content)) >= $minimumLength) {
-                $money = (float)$this->settings->get('antoinefr-money.moneyforpost', 0);
+                $money = (float) $this->settings->get('antoinefr-money.moneyforpost', 0);
 
                 $rewarded = $this->settings->get("mattoid-money-history-auto.privateChatsAreNotRewarded", 0);
                 if ($rewarded && $event->post->discussion->is_private) {

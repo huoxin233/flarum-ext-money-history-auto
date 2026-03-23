@@ -27,11 +27,12 @@ class DiscussionWasHiddenHistory
 
         $this->sourceKey = "mattoid-money-history-auto.forum.source-desc";
         $this->sourceDesc = $translator->trans("mattoid-money-history-auto.forum.source-desc");
-        $this->autoremove = (int)$this->settings->get('antoinefr-money.autoremove', 1);
+        $this->autoremove = (int) $this->settings->get('antoinefr-money.autoremove', 1);
     }
-    public function handle(DiscussionHidden $event) {
+    public function handle(DiscussionHidden $event)
+    {
         if ($this->autoremove == AutoRemoveEnum::HIDDEN) {
-            $money = (float)$this->settings->get('antoinefr-money.moneyfordiscussion', 0);
+            $money = (float) $this->settings->get('antoinefr-money.moneyfordiscussion', 0);
 
             $rewarded = $this->settings->get("mattoid-money-history-auto.privateChatsAreNotRewarded", 0);
             if ($rewarded && $event->discussion->is_private) {

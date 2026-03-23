@@ -16,7 +16,7 @@ use Psr\Http\Server\RequestHandlerInterface;
 class DistributeAllHistoryMiddleware implements MiddlewareInterface
 {
     private $events;
-    private $source = "BABCHDISTRIBUTION";
+    private $source = "BATCHDISTRIBUTION";
     private $sourceKey = "";
     private $sourceDesc = "系统奖励";
 
@@ -35,12 +35,12 @@ class DistributeAllHistoryMiddleware implements MiddlewareInterface
         $response = $handler->handle($request);
 
         $dryRun = Arr::get($request->getParsedBody(), 'dryRun');
-        if ($response->getStatusCode() === 200 && !$dryRun && strpos($request->getUri(), "/money-to-all")) {
+        if ($response->getStatusCode() === 200 && ! $dryRun && strpos($request->getUri(), "/money-to-all")) {
 
             $amount = Arr::get($request->getParsedBody(), 'amount');
 
             User::query()->chunk(500, function ($userList) use ($amount, $actor) {
-                $this->events->dispatch(new MoneyAllHistoryEvent($userList->all(), (float)$amount, $this->source, $this->sourceDesc, $this->sourceKey, $actor));
+                $this->events->dispatch(new MoneyAllHistoryEvent($userList->all(), (float) $amount, $this->source, $this->sourceDesc, $this->sourceKey, $actor));
             });
         }
 

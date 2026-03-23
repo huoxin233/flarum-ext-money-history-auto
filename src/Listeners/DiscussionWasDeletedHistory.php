@@ -27,15 +27,16 @@ class DiscussionWasDeletedHistory
 
         $this->sourceKey = "mattoid-money-history-auto.forum.discussion-was-deleted";
         $this->sourceDesc = $translator->trans("mattoid-money-history-auto.forum.discussion-was-deleted");
-        $this->autoremove = (int)$this->settings->get('antoinefr-money.autoremove', 1);
+        $this->autoremove = (int) $this->settings->get('antoinefr-money.autoremove', 1);
         $this->cascaderemove = (bool) $this->settings->get('antoinefr-money.cascaderemove', false);
     }
 
-    public function handle(DiscussionDeleted $event) {
+    public function handle(DiscussionDeleted $event)
+    {
 
 
         if ($this->autoremove == AutoRemoveEnum::DELETED && $this->cascaderemove) {
-            $money = (float)$this->settings->get('antoinefr-money.moneyfordiscussion', 0);
+            $money = (float) $this->settings->get('antoinefr-money.moneyfordiscussion', 0);
 
             $rewarded = $this->settings->get("mattoid-money-history-auto.privateChatsAreNotRewarded", 0);
             if ($rewarded && $event->discussion->is_private) {

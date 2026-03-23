@@ -26,14 +26,15 @@ class UserWillBeSavedHistory
 
         $this->sourceKey = "mattoid-money-history-auto.forum.system-rewards";
         $this->sourceDesc = $translator->trans("mattoid-money-history-auto.forum.system-rewards");
-        $this->autoremove = (int)$this->settings->get('antoinefr-money.autoremove', 1);
+        $this->autoremove = (int) $this->settings->get('antoinefr-money.autoremove', 1);
     }
 
-    public function handle(Saving $event) {
+    public function handle(Saving $event)
+    {
         $attributes = Arr::get($event->data, 'attributes', []);
 
         if (array_key_exists('money', $attributes)) {
-            $this->events->dispatch(new MoneyHistoryEvent($event->user, (float)$attributes['money'], $this->source, $this->sourceDesc, $this->sourceKey));
+            $this->events->dispatch(new MoneyHistoryEvent($event->user, (float) $attributes['money'], $this->source, $this->sourceDesc, $this->sourceKey));
         }
     }
 }

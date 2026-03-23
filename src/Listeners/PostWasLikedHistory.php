@@ -25,11 +25,12 @@ class PostWasLikedHistory
 
         $this->sourceKey = "mattoid-money-history-auto.forum.post-was-liked";
         $this->sourceDesc = $translator->trans("mattoid-money-history-auto.forum.post-was-liked");
-        $this->autoremove = (int)$this->settings->get('antoinefr-money.autoremove', 1);
+        $this->autoremove = (int) $this->settings->get('antoinefr-money.autoremove', 1);
     }
 
-    public function handle(PostWasLiked $event) {
-        $money = (float)$this->settings->get('antoinefr-money.moneyforlike', 0);
+    public function handle(PostWasLiked $event)
+    {
+        $money = (float) $this->settings->get('antoinefr-money.moneyforlike', 0);
 
         $rewarded = $this->settings->get("mattoid-money-history-auto.privateChatsAreNotRewarded", 0);
         if ($rewarded && $event->post->discussion->is_private) {

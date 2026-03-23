@@ -25,11 +25,12 @@ class DiscussionWasStartedHistory
 
         $this->sourceKey = "mattoid-money-history-auto.forum.discussion-was-started";
         $this->sourceDesc = $translator->trans("mattoid-money-history-auto.forum.discussion-was-started");
-        $this->autoremove = (int)$this->settings->get('antoinefr-money.autoremove', 1);
+        $this->autoremove = (int) $this->settings->get('antoinefr-money.autoremove', 1);
     }
 
-    public function handle(Started $event) {
-        $money = (float)$this->settings->get('antoinefr-money.moneyfordiscussion', 0);
+    public function handle(Started $event)
+    {
+        $money = (float) $this->settings->get('antoinefr-money.moneyfordiscussion', 0);
 
         $rewarded = $this->settings->get("mattoid-money-history-auto.privateChatsAreNotRewarded", 0);
         if ($rewarded && $event->discussion->is_private) {

@@ -38,7 +38,7 @@ class MoneyRewardsMiddleware implements MiddlewareInterface
         $postId = Arr::get($request->getAttribute("routeParameters"), "id");
         $targetUser = null;
         $oldTargetMoney = 0;
-        
+
         if ($postId && preg_match('/\/posts\/\d*\/money-rewards/', $request->getUri())) {
             $post = Post::query()->where('id', $postId)->first();
             if ($post) {
@@ -55,7 +55,7 @@ class MoneyRewardsMiddleware implements MiddlewareInterface
             $amount = Arr::get($request->getParsedBody(), 'data.attributes.amount');
             $createMoney = Arr::get($request->getParsedBody(), 'data.attributes.createMoney');
 
-            if (!$createMoney) {
+            if (! $createMoney) {
                 $this->events->dispatch(new MoneyHistoryEvent($actor, -$amount, $this->source, $this->sourceDesc, $this->sourceKey, $actor, $oldActorMoney));
             }
 

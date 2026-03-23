@@ -28,8 +28,9 @@ class PostWasUnlikedHistory
     }
 
 
-    public function handle(PostWasUnliked $event) {
-        $money = (float)$this->settings->get('antoinefr-money.moneyforlike', 0);
+    public function handle(PostWasUnliked $event)
+    {
+        $money = (float) $this->settings->get('antoinefr-money.moneyforlike', 0);
         $rewarded = $this->settings->get("mattoid-money-history-auto.privateChatsAreNotRewarded", 0);
         if ($rewarded && $event->post->discussion->is_private) {
             $user = $event->post->user;
