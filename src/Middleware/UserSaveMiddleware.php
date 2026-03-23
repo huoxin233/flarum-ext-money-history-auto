@@ -4,14 +4,10 @@ namespace Mattoid\MoneyHistoryAuto\Middleware;
 
 use Flarum\Http\RequestUtil;
 use Flarum\Locale\Translator;
-use Flarum\Post\Post;
-use Flarum\Settings\SettingsRepositoryInterface;
 use Flarum\User\User;
 use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Support\Arr;
-use Mattoid\MoneyHistory\Event\MoneyAllHistoryEvent;
 use Mattoid\MoneyHistory\Event\MoneyHistoryEvent;
-use Mattoid\OperateLog\model\UserOperateLog;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Server\MiddlewareInterface;
@@ -36,25 +32,41 @@ class UserSaveMiddleware implements MiddlewareInterface
         $actor = RequestUtil::getActor($request);
         $attributes = Arr::get($request->getParsedBody(), 'data.attributes');
 
-        $oldMoney = 0;
+        // Fetch the current balance before handling the request.
+        $balanceBefore = 0;
         $userId = Arr::get($request->getParsedBody(), 'data.id');
         if ($request->getMethod() == 'PATCH' && strpos($request->getUri(), '/users/') && isset($attributes['money'])) {
+            // Fetch the current balance before the update is applied.
             $preSaveUser = User::query()->where("id", $userId)->first();
-            $oldMoney = $preSaveUser ? $preSaveUser->money : 0;
+            $balanceBefore = $preSaveUser ? $preSaveUser->money : 0;
+
+            // Allow the user object to be updated by the next handler
             $response = $handler->handle($request);
 
             if ($response->getStatusCode() === 200) {
+                // Refetch the user to capture the balance after the save operation.
                 $user = User::query()->where('id', $userId)->first();
-                $newMoney = $user ? $user->money : $oldMoney;
+                $balanceAfter = $user ? $user->money : $balanceBefore;
 
-                if ($user && $newMoney != $oldMoney) {
-                    $moneyDifference = $newMoney - $oldMoney;
-                    $this->events->dispatch(new MoneyHistoryEvent($user, $moneyDifference, $this->source, $this->sourceDesc, $this->sourceKey, $actor, $oldMoney));
+                if ($user && $balanceAfter != $balanceBefore) {
+                    $balanceDelta = $balanceAfter - $balanceBefore;
+                    $this->events->dispatch(new MoneyHistoryEvent(
+                        $user,
+                        $balanceDelta,
+                        $this->source,
+                        $this->sourceDesc,
+                        $this->sourceKey,
+                        $actor,
+                        $balanceBefore,
+                        $balanceAfter
+                    ));
                 }
             }
 
             return $response;
         }
+
+        // For all other requests, just pass through
         return $handler->handle($request);
     }
 }

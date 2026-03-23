@@ -5,13 +5,10 @@ namespace Mattoid\MoneyHistoryAuto\Middleware;
 use Flarum\Http\RequestUtil;
 use Flarum\Locale\Translator;
 use Flarum\Post\Post;
-use Flarum\Settings\SettingsRepositoryInterface;
 use Flarum\User\User;
 use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Support\Arr;
-use Mattoid\MoneyHistory\Event\MoneyAllHistoryEvent;
 use Mattoid\MoneyHistory\Event\MoneyHistoryEvent;
-use Mattoid\OperateLog\model\UserOperateLog;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Server\MiddlewareInterface;
@@ -34,19 +31,20 @@ class MoneyRewardsMiddleware implements MiddlewareInterface
     public function process(ServerRequestInterface $request, RequestHandlerInterface $handler): ResponseInterface
     {
         $actor = RequestUtil::getActor($request);
-        $userId = Arr::get($actor, 'id');
+
+        // Capture state before handling for accurate history logging
         $postId = Arr::get($request->getAttribute("routeParameters"), "id");
         $targetUser = null;
-        $oldTargetMoney = 0;
+        $targetBalanceBefore = 0;
 
         if ($postId && preg_match('/\/posts\/\d*\/money-rewards/', $request->getUri())) {
             $post = Post::query()->where('id', $postId)->first();
             if ($post) {
                 $targetUser = User::query()->where('id', $post->user_id)->first();
-                $oldTargetMoney = $targetUser ? $targetUser->money : 0;
+                $targetBalanceBefore = $targetUser ? $targetUser->money : 0;
             }
         }
-        $oldActorMoney = $actor->money;
+        $actorBalanceBefore = $actor->money;
 
         $response = $handler->handle($request);
 
@@ -55,13 +53,34 @@ class MoneyRewardsMiddleware implements MiddlewareInterface
             $amount = Arr::get($request->getParsedBody(), 'data.attributes.amount');
             $createMoney = Arr::get($request->getParsedBody(), 'data.attributes.createMoney');
 
+            // deduction from actor
             if (! $createMoney) {
-                $this->events->dispatch(new MoneyHistoryEvent($actor, -$amount, $this->source, $this->sourceDesc, $this->sourceKey, $actor, $oldActorMoney));
+                $this->events->dispatch(new MoneyHistoryEvent(
+                    $actor,
+                    -$amount,
+                    $this->source,
+                    $this->sourceDesc,
+                    $this->sourceKey,
+                    $actor,
+                    $actorBalanceBefore,
+                    $actorBalanceBefore - $amount
+                ));
             }
 
             if ($targetUser) {
+                // Refetch the target user to capture the updated balance after the reward.
                 $user = User::query()->where('id', $targetUser->id)->first();
-                $this->events->dispatch(new MoneyHistoryEvent($user, $amount, $this->source, $this->sourceDesc, $this->sourceKey, $actor, $oldTargetMoney));
+                $targetBalanceAfter = $user ? $user->money : $targetBalanceBefore;
+                $this->events->dispatch(new MoneyHistoryEvent(
+                    $user,
+                    $amount,
+                    $this->source,
+                    $this->sourceDesc,
+                    $this->sourceKey,
+                    $actor,
+                    $targetBalanceBefore,
+                    $targetBalanceAfter
+                ));
             }
         }
 

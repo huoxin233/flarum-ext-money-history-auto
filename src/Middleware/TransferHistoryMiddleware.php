@@ -4,13 +4,9 @@ namespace Mattoid\MoneyHistoryAuto\Middleware;
 
 use Flarum\Http\RequestUtil;
 use Flarum\Locale\Translator;
-use Flarum\Settings\SettingsRepositoryInterface;
-use Flarum\User\User;
 use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Support\Arr;
-use Mattoid\MoneyHistory\Event\MoneyAllHistoryEvent;
 use Mattoid\MoneyHistory\Event\MoneyHistoryEvent;
-use Mattoid\OperateLog\model\UserOperateLog;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Server\MiddlewareInterface;
@@ -33,22 +29,32 @@ class TransferHistoryMiddleware implements MiddlewareInterface
     public function process(ServerRequestInterface $request, RequestHandlerInterface $handler): ResponseInterface
     {
         $actor = RequestUtil::getActor($request);
-        $userId = Arr::get($actor, 'id');
 
         $response = $handler->handle($request);
 
         if ($response->getStatusCode() === 201 && strpos($request->getUri(), "/transferMoney")) {
-            $moneyTransfer = Arr::get($request->getParsedBody(), 'data.attributes.moneyTransfer');
+            $transferAmount = Arr::get($request->getParsedBody(), 'data.attributes.moneyTransfer');
             $selectedUsers = json_decode(Arr::get($request->getParsedBody(), 'data.attributes.selectedUsers'), true);
 
-            $actor->money -= $moneyTransfer * count($selectedUsers);
-            $this->events->dispatch(new MoneyHistoryEvent($actor, -$moneyTransfer * count($selectedUsers), $this->source, $this->sourceDesc, $this->sourceKey));
+            $batchDelta = -$transferAmount * count($selectedUsers);
+            $actor->money += $batchDelta;
+            $this->events->dispatch(new MoneyHistoryEvent($actor, $batchDelta, $this->source, $this->sourceDesc, $this->sourceKey));
 
-            $transferMoney = Arr::get($request->getParsedBody(), 'data.attributes.money');
+            $directTransferAmount = Arr::get($request->getParsedBody(), 'data.attributes.money');
 
-            $oldBalance = $actor->money;
+            $balanceBefore = $actor->money;
+            $balanceAfter = $balanceBefore - $directTransferAmount;
 
-            $this->events->dispatch(new MoneyHistoryEvent($actor, -$transferMoney, $this->source, $this->sourceDesc, $this->sourceKey, $actor, $oldBalance));
+            $this->events->dispatch(new MoneyHistoryEvent(
+                $actor,
+                -$directTransferAmount,
+                $this->source,
+                $this->sourceDesc,
+                $this->sourceKey,
+                $actor,
+                $balanceBefore,
+                $balanceAfter
+            ));
         }
 
         return $response;
