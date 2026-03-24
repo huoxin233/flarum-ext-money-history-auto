@@ -2,33 +2,33 @@
 
 namespace Mattoid\MoneyHistoryAuto\Listeners;
 
-use Flarum\Locale\Translator;
 use Flarum\Settings\SettingsRepositoryInterface;
+use Illuminate\Contracts\Events\Dispatcher;
 use Mattoid\MoneyHistory\Event\MoneyHistoryEvent;
 use Ziven\checkin\Event\checkinUpdated;
-use Illuminate\Contracts\Events\Dispatcher;
 
 class CheckinSavedHistory
 {
     private $source = "CHECKINSAVED";
-    private $sourceKey;
-    private $sourceDesc = "签到奖励";
+    private $sourceKey = "mattoid-money-history-auto.forum.checkin-saved";
 
-    private $events;
-    private $settings;
-
-    public function __construct(Dispatcher $events, SettingsRepositoryInterface $settings, Translator $translator)
-    {
-        $this->events = $events;
-        $this->settings = $settings;
-        $this->sourceKey = "mattoid-money-history-auto.forum.checkin-saved";
-        $this->sourceDesc = $translator->trans("mattoid-money-history-auto.forum.checkin-saved");
+    public function __construct(
+        private Dispatcher $events,
+        private SettingsRepositoryInterface $settings
+    ) {
     }
 
-    public function handle(checkinUpdated $checkin)
+    public function handle(checkinUpdated $checkin): void
     {
         $checkinRewardMoney = (float) $this->settings->get('ziven-forum-checkin.checkinRewardMoney', 0);
 
-        $this->events->dispatch(new MoneyHistoryEvent($checkin->user, $checkinRewardMoney, $this->source, $this->sourceDesc, $this->sourceKey, $checkin->user));
+        $this->events->dispatch(new MoneyHistoryEvent(
+            $checkin->user,
+            $checkinRewardMoney,
+            $this->source,
+            $this->sourceKey,
+            [],
+            $checkin->user
+        ));
     }
 }

@@ -3,7 +3,6 @@
 namespace Mattoid\MoneyHistoryAuto\Middleware;
 
 use Flarum\Http\RequestUtil;
-use Flarum\Locale\Translator;
 use Flarum\User\User;
 use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Support\Arr;
@@ -15,36 +14,34 @@ use Psr\Http\Server\RequestHandlerInterface;
 
 class DistributeAllHistoryMiddleware implements MiddlewareInterface
 {
-    private $events;
     private $source = "BATCHDISTRIBUTION";
-    private $sourceKey = "";
-    private $sourceDesc = "系统奖励";
+    private $sourceKey = "mattoid-money-history-auto.forum.system-rewards";
 
-    public function __construct(Dispatcher $events, Translator $translator)
+    public function __construct(private Dispatcher $events)
     {
-        $this->events = $events;
-        $this->sourceKey = "mattoid-money-history-auto.forum.system-rewards";
-        $this->sourceDesc = $translator->trans("mattoid-money-history-auto.forum.system-rewards");
     }
 
     public function process(ServerRequestInterface $request, RequestHandlerInterface $handler): ResponseInterface
     {
         $actor = RequestUtil::getActor($request);
-        $userId = Arr::get($actor, 'id');
-
         $response = $handler->handle($request);
 
         $dryRun = Arr::get($request->getParsedBody(), 'dryRun');
-        if ($response->getStatusCode() === 200 && ! $dryRun && strpos($request->getUri(), "/money-to-all")) {
 
+        if ($response->getStatusCode() === 200 && ! $dryRun && strpos($request->getUri(), '/money-to-all')) {
             $amount = Arr::get($request->getParsedBody(), 'amount');
 
-            User::query()->chunk(500, function ($userList) use ($amount, $actor) {
-                $this->events->dispatch(new MoneyAllHistoryEvent($userList->all(), (float) $amount, $this->source, $this->sourceDesc, $this->sourceKey, $actor));
+            User::query()->chunk(500, function ($userList) use ($amount, $actor): void {
+                $this->events->dispatch(new MoneyAllHistoryEvent(
+                    $userList->all(),
+                    (float) $amount,
+                    $this->source,
+                    $this->sourceKey,
+                    [],
+                    $actor
+                ));
             });
         }
-
-
 
         return $response;
     }

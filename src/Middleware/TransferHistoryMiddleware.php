@@ -3,7 +3,6 @@
 namespace Mattoid\MoneyHistoryAuto\Middleware;
 
 use Flarum\Http\RequestUtil;
-use Flarum\Locale\Translator;
 use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Support\Arr;
 use Mattoid\MoneyHistory\Event\MoneyHistoryEvent;
@@ -14,22 +13,16 @@ use Psr\Http\Server\RequestHandlerInterface;
 
 class TransferHistoryMiddleware implements MiddlewareInterface
 {
-    private $events;
     private $source = "TRANSFERMONEY";
-    private $sourceKey;
-    private $sourceDesc;
+    private $sourceKey = "mattoid-money-history-auto.forum.searching-recipient";
 
-    public function __construct(Dispatcher $events, Translator $translator)
+    public function __construct(private Dispatcher $events)
     {
-        $this->events = $events;
-        $this->sourceKey = "mattoid-money-history-auto.forum.searching-recipient";
-        $this->sourceDesc = $translator->trans("mattoid-money-history-auto.forum.searching-recipient");
     }
 
     public function process(ServerRequestInterface $request, RequestHandlerInterface $handler): ResponseInterface
     {
         $actor = RequestUtil::getActor($request);
-
         $response = $handler->handle($request);
 
         if ($response->getStatusCode() === 201 && strpos($request->getUri(), "/transferMoney")) {
@@ -38,10 +31,16 @@ class TransferHistoryMiddleware implements MiddlewareInterface
 
             $batchDelta = -$transferAmount * count($selectedUsers);
             $actor->money += $batchDelta;
-            $this->events->dispatch(new MoneyHistoryEvent($actor, $batchDelta, $this->source, $this->sourceDesc, $this->sourceKey));
+
+            $this->events->dispatch(new MoneyHistoryEvent(
+                $actor,
+                $batchDelta,
+                $this->source,
+                $this->sourceKey,
+                []
+            ));
 
             $directTransferAmount = Arr::get($request->getParsedBody(), 'data.attributes.money');
-
             $balanceBefore = $actor->money;
             $balanceAfter = $balanceBefore - $directTransferAmount;
 
@@ -49,8 +48,8 @@ class TransferHistoryMiddleware implements MiddlewareInterface
                 $actor,
                 -$directTransferAmount,
                 $this->source,
-                $this->sourceDesc,
                 $this->sourceKey,
+                [],
                 $actor,
                 $balanceBefore,
                 $balanceAfter
